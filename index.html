@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>Mew - Studio</title>
+    <style>
+        :root {
+            --bg1: #0b0710;
+            --bg2: #0f0d1a;
+            --accent: #d95a00;
+            --muted: #8b7a92;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        html, body {
+            height: 100%;
+        }
+        body {
+            font-family: Inter, system-ui, Segoe UI, Roboto;
+            overflow: hidden;
+            background: radial-gradient(1200px 600px at 10% 10%, #0f0920 0%, transparent 20%),
+                        radial-gradient(800px 350px at 90% 90%, #101225 0%, transparent 25%),
+                        linear-gradient(120deg, #06050a 0%, #0b0710 35%, #120a18 65%, #0f0608 100%);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            position: relative;
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+        .hint {
+            position: fixed;
+            left: 18px;
+            top: 18px;
+            font-size: clamp(12px, 1.8vw, 18px);
+            opacity: .9;
+            letter-spacing: .06em;
+            font-weight: 600;
+            color: var(--muted);
+        }
+        .hint.btm {
+            right: 18px;
+            left: auto;
+            bottom: 18px;
+            top: auto;
+            font-weight: 600;
+        }
+        .strip {
+            position: fixed;
+            left: 0;
+            right: 0;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 30;
+        }
+        .strip.top {
+            top: 10px;
+        }
+        .strip.bot {
+            bottom: 10px;
+        }
+        .track {
+            white-space: nowrap;
+            display: inline-block;
+            will-change: transform;
+            font-weight: 700;
+            padding: 0 2rem;
+            font-size: clamp(12px, 1.6vw, 16px);
+            text-transform: uppercase;
+            letter-spacing: .16em;
+            opacity: .86;
+        }
+        .track span {
+            display: inline-block;
+            padding: 0 1.6rem;
+            margin: 0 1rem;
+            position: relative;
+        }
+        .track span:after {
+            content: "";
+            position: absolute;
+            right: -.6rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 6px;
+            height: 6px;
+            border-radius: 999px;
+            background: linear-gradient(180deg, var(--accent), #ff8a00);
+            opacity: .9;
+        }
+        @keyframes marqueeL {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        @keyframes marqueeR {
+            0% { transform: translateX(-50%); }
+            100% { transform: translateX(0); }
+        }
+        .track.wrap {
+            display: inline-block;
+            padding-left: 100%;
+        }
+        .strip.top .track {
+            animation: marqueeL 18s linear infinite;
+        }
+        .strip.bot .track {
+            animation: marqueeR 22s linear infinite;
+        }
+        .stage {
+            position: relative;
+            z-index: 40;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 12px;
+            padding: 40px;
+        }
+        .logo {
+            font-size: clamp(48px, 18vw, 140px);
+            font-weight: 800;
+            will-change: font-family, transform, filter;
+            text-align: center;
+            line-height: 0.86;
+            letter-spacing: .02em;
+            transition: all .28s cubic-bezier(.2, .9, .3, 1);
+            text-shadow: 0 8px 40px rgba(0,0,0,.7), 0 1px 0 rgba(255,255,255,.02);
+            animation: glow 3s infinite alternate;
+        }
+        @keyframes glow {
+            from { text-shadow: 0 0 20px #ff6, 0 0 40px #f06; }
+            to { text-shadow: 0 0 40px #6ff, 0 0 80px #06f; }
+        }
+        .field {
+            position: fixed;
+            inset: 0;
+            z-index: 10;
+            display: grid;
+            place-items: center;
+            pointer-events: none;
+            perspective: 900px;
+            opacity: .65;
+        }
+        .grid {
+            width: 120%;
+            height: 120%;
+            display: grid;
+            grid-template-columns: repeat(28, 1fr);
+            grid-auto-rows: calc(100% / 18);
+            gap: 6px;
+            transform-style: preserve-3d;
+            filter: blur(.2px) saturate(1.05);
+        }
+        .tile {
+            width: 100%;
+            height: 100%;
+            display: block;
+            transform-style: preserve-3d;
+            transition: transform .6s linear;
+            will-change: transform;
+            transform-origin: center;
+            box-shadow: 0 6px 16px rgba(0,0,0,.45) inset;
+            border-radius: 4px;
+            backface-visibility: hidden;
+            outline: 1px solid rgba(255,255,255,.02);
+        }
+        .tile .face {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(145deg, rgba(255,255,255,.02), rgba(0,0,0,.35));
+            border-radius: 3px;
+            transform: translateZ(18px);
+        }
+        @keyframes upturn {
+            0% { transform: rotateX(6deg) translateZ(0) translateY(0); }
+            50% { transform: rotateX(-72deg) translateZ(26px) translateY(-8px); }
+            100% { transform: rotateX(6deg) translateZ(0) translateY(0); }
+        }
+        .tile.ani {
+            animation: upturn var(--dur, 4s) ease-in-out var(--delay, 0s) infinite;
+        }
+        .vfx {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 20;
+            mix-blend-mode: screen;
+        }
+        .vfx:before {
+            content: "";
+            position: absolute;
+            inset: -20%;
+            background: radial-gradient(600px 160px at 10% 20%, rgba(217,90,0,.06), transparent 10%),
+                        radial-gradient(400px 200px at 80% 80%, rgba(80,60,150,.04), transparent 10%);
+            filter: blur(40px);
+            opacity: .9;
+        }
+        .vfx:after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-image: linear-gradient(90deg, rgba(255,255,255,.02) 0 1px, transparent 1px);
+            background-size: 12px 12px;
+            mix-blend-mode: overlay;
+            opacity: .12;
+        }
+        @media (max-width: 720px) {
+            .strip { height: 38px; }
+            .logo { font-size: clamp(34px, 24vw, 86px); }
+            .grid { gap: 4px; grid-template-columns: repeat(18, 1fr); grid-auto-rows: calc(100% / 22); }
+        }
+        /* loading screen */
+        #loader {
+            position: fixed;
+            inset: 0;
+            background: #0a0710;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            transition: opacity .8s ease;
+        }
+        #loader img {
+            width: 120px;
+            animation: pulse 1.2s ease-in-out infinite alternate;
+        }
+        @keyframes pulse {
+            to { transform: scale(1.1); opacity: .8; }
+        }
+        #bar {
+            width: 60%;
+            max-width: 400px;
+            height: 6px;
+            background: rgba(255,255,255,.08);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 30px;
+        }
+        #bar span {
+            display: block;
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent), #ff8a00);
+            border-radius: 3px;
+            transition: width .2s;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron&family=Russo+One&family=Poiret+One&family=Exo+2&family=Bungee+Hairline&family=Chakra+Petch&family=Monoton&family=Audiowide&family=Teko&family=Righteous&family=Syncopate&family=VT323&family=Major+Mono+Display&family=Cinzel+Decorative&family=Press+Start+2P&family=Michroma&family=Wallpoet&family=Unica+One&family=Jura&family=Kanit&family=Inter&family=Montserrat&family=Poppins&family=Rubik&family=Space+Grotesk&family=Nunito&family=Bebas+Neue&family=Raleway&family=Playfair+Display&family=Oswald&family=Lato&family=Merriweather&family=PT+Sans&family=Work+Sans&family=Inconsolata&family=Heebo&family=Ubuntu&family=Quicksand&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="loader">
+        <img src="/image/mewlogo.png" alt="Mew logo">
+        <div id="bar"><span></span></div>
+    </div>
+    <canvas id="bg"></canvas>
+    <div class="field" aria-hidden="true">
+        <div class="grid" id="g"></div>
+    </div>
+    <div class="vfx"></div>
+    <div class="stage">
+        <div class="logo" id="brand">Mew</div>
+    </div>
+    <div class="hint">Experience the</div>
+    <div class="hint btm">...soon with you</div>
+    <div class="strip top">
+        <div class="track" id="topT"></div>
+    </div>
+    <div class="strip bot">
+        <div class="track" id="botT"></div>
+    </div>
+    <script>
+        const c = document.getElementById("bg"), x = c.getContext("2d");
+        let t = 0;
+        function resize() {
+            c.width = innerWidth;
+            c.height = innerHeight;
+        }
+        resize();
+        addEventListener("resize", resize);
+        function wave() {
+            x.clearRect(0, 0, c.width, c.height);
+            const w = c.width, h = c.height;
+            x.fillStyle = x.createLinearGradient(0, 0, w, h);
+            x.fillStyle.addColorStop(0, "#20002c");
+            x.fillStyle.addColorStop(1, "#111");
+            x.fillRect(0, 0, w, h);
+            for (let j = 0; j < 3; j++) {
+                x.beginPath();
+                for (let i = 0; i <= w; i += 10) {
+                    let y = Math.sin(i * 0.005 + t * 0.02 + j) * 50 + Math.cos(i * 0.002 - t * 0.015 - j) * 30 + (h * 0.6 + Math.sin(t * 0.01 + j) * 60);
+                    x.lineTo(i, y);
+                }
+                x.strokeStyle = `hsla(${200 + 50 * j}, 80%, ${30 + 20 * j}%, .5)`;
+                x.lineWidth = 2;
+                x.stroke();
+            }
+            for (let i = 0; i < 80; i++) {
+                x.fillStyle = `hsla(${200 + Math.sin(i + t * 0.02) * 60}, 80%, 50%, .3)`;
+                let px = (i * 30 + t * 5) % w;
+                let py = Math.sin(px * 0.01 + t * 0.02) * 40 + h * 0.65;
+                x.beginPath();
+                x.rect(px, py, 8, 8);
+                x.fill();
+            }
+            t += 0.5;
+            requestAnimationFrame(wave);
+        }
+        wave();
+
+        const F = [
+            "Orbitron", "Russo One", "Poiret One", "Exo 2", "Bungee Hairline", "Chakra Petch", "Monoton", "Audiowide", "Teko", "Righteous",
+            "Syncopate", "VT323", "Major Mono Display", "Cinzel Decorative", "Press Start 2P", "Michroma", "Wallpoet", "Unica One", "Jura", "Kanit",
+            "Inter", "Montserrat", "Poppins", "Rubik", "Space Grotesk", "Nunito", "Bebas Neue", "Raleway", "Playfair Display", "Oswald",
+            "Lato", "Merriweather", "PT Sans", "Work Sans", "Inconsolata", "Heebo", "Ubuntu", "Quicksand"
+        ];
+        const grid = document.getElementById('g');
+        const cols = 28, rows = 18;
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const t = document.createElement('div');
+                t.className = 'tile';
+                t.style.setProperty('--r', r);
+                t.style.setProperty('--c', c);
+                const f = document.createElement('div');
+                f.className = 'face';
+                t.appendChild(f);
+                grid.appendChild(t);
+            }
+        }
+        [...document.querySelectorAll('.tile')].forEach(el => {
+            const c = +el.style.getPropertyValue('--c');
+            const r = +el.style.getPropertyValue('--r');
+            const dx = c - cols / 2, dy = r - rows / 2;
+            const d = Math.hypot(dx, dy);
+            el.classList.add('ani');
+            el.style.setProperty('--delay', `${d / 6 + Math.random() * 0.6}s`);
+            el.style.setProperty('--dur', `${4.5 + Math.random() * 3}s`);
+            el.style.opacity = 0.82 - d / 160;
+            el.style.transform = `rotateX(6deg) translateZ(${(Math.sin(d / 3) + 2) * 2}px)`;
+        });
+        const brand = document.getElementById('brand');
+        let idx = 0;
+        function tick() {
+            brand.style.fontFamily = `'${F[Math.floor(Math.random() * F.length)]}', sans-serif`;
+            brand.style.transform = 'scale(1.02) rotateZ(' + (Math.sin(Date.now() / 400) * 1.2) + 'deg)';
+            brand.style.filter = 'drop-shadow(0 20px 30px rgba(0,0,0,.6))';
+            idx++;
+        }
+        tick();
+        setInterval(tick, 1000);
+        const P = ['Apps.', 'Websites.', 'Games.', 'Music.', 'Books.', '3D Animation.', 'Services.', 'Design.', 'Social Media.', 'Graphics.', 'Lifestyles.'];
+        function mk(track, repeat) {
+            const out = document.getElementById(track), txt = P.join(' ');
+            for (let i = 0; i < repeat; i++) {
+                const s = document.createElement('span');
+                s.textContent = txt;
+                out.appendChild(s);
+            }
+            out.classList.add('wrap');
+        }
+        mk('topT', 6);
+        mk('botT', 6);
+        let px = 0, py = 0;
+        function mv(x, y) {
+            px = (x - innerWidth / 2) / innerWidth * 18;
+            py = (y - innerHeight / 2) / innerHeight * 10;
+            document.querySelector('.grid').style.transform = `rotateX(${py}deg) rotateZ(${px / 6}deg) translateZ(-40px)`;
+            document.querySelector('.stage').style.transform = `translate3d(${px / 2}px, ${py / 2}px, 0)`;
+        }
+        window.addEventListener('pointermove', e => mv(e.clientX, e.clientY));
+        window.addEventListener('touchmove', e => {
+            if (e.touches[0]) mv(e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: true });
+        if (window.DeviceOrientationEvent) {
+            window.addEventListener('deviceorientation', o => {
+                mv(innerWidth / 2 + (o.gamma || 0) * 8, innerHeight / 2 + (o.beta || 0) * 6);
+            });
+        }
+        const mq = matchMedia('(prefers-reduced-motion: reduce)');
+        if (mq.matches) {
+            document.querySelectorAll('.tile').forEach(t => t.classList.remove('ani'));
+            document.querySelectorAll('.track').forEach(t => t.style.animation = 'none');
+        }
+        /* loader logic */
+        const loader = document.getElementById('loader'), bar = document.querySelector('#bar span');
+        let progress = 0;
+        const assets = [...F.map(f => `https://fonts.googleapis.com/css2?family=${encodeURIComponent(f)}`), '/image/Mew_logo-tp.png'];
+        function preload(url) {
+            return new Promise(res => {
+                const el = url.endsWith('.png') ? new Image() : document.createElement('link');
+                if (el.tagName === 'IMG') {
+                    el.onload = res;
+                    el.onerror = res;
+                    el.src = url;
+                } else {
+                    el.rel = 'stylesheet';
+                    el.href = url;
+                    el.onload = res;
+                    el.onerror = res;
+                    document.head.appendChild(el);
+                }
+            });
+        }
+        Promise.all(assets.map((a, i) => preload(a).then(() => {
+            progress = (i + 1) / assets.length * 100;
+            bar.style.width = progress + '%';
+        }))).then(() => {
+            setTimeout(() => {
+                loader.style.opacity = '0';
+                setTimeout(() => loader.remove(), 800);
+            }, 300);
+        });
+    </script>
+</body>
+</html>
