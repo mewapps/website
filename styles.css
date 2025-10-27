@@ -1,0 +1,200 @@
+:root {
+  --card-radius: 18px;
+  --card-w: min(44vw, 300px);
+  --card-h: min(35vw, 240px);
+  --circle-r: 120px;
+}
+
+
+  html,body{
+    height:100%;
+    margin:0;
+    font-family: "Segoe UI", Roboto, system-ui, -apple-system, "Helvetica Neue", Arial;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:40px;
+  }
+
+  /* Grid container */
+/* Grid container */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, var(--card-w));
+  grid-template-rows: repeat(2, var(--card-h));
+  gap: 28px;
+  justify-content: center;
+  align-content: center;
+  perspective: 320px;
+}
+
+
+  /* Card */
+  .card {
+    position: relative;
+    width: var(--card-w);
+    height: var(--card-h);
+    border-radius: var(--card-radius);
+    background: linear-gradient(180deg,#ffffff,#fafafa);
+    border: 1px solid rgba(0,0,0,0.06);
+    box-shadow: 0 10px 30px rgba(12,18,30,0.07);
+    overflow: hidden;
+    cursor: pointer;
+    transform-style: preserve-3d;
+    transition: transform 360ms cubic-bezier(.2,.8,.2,1), box-shadow 260ms;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-decoration: none !important;
+  }
+
+  /* card inner (for consistent stacking) */
+  .card-inner {
+    position:relative;
+    width:100%;
+    height:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding: 12px;
+  }
+
+  /* Make outer corners feel like they "fan out" */
+  .card.tl  { transform-origin: top left;    transform: rotateX(7deg)  rotateY(-8deg); }
+  .card.tr  { transform-origin: top right;   transform: rotateX(7deg)  rotateY(8deg);  }
+  .card.bl  { transform-origin: bottom left; transform: rotateX(-7deg) rotateY(-8deg); }
+  .card.br  { transform-origin: bottom right;transform: rotateX(-7deg) rotateY(8deg);  }
+
+  /* Keep the angle but scale on hover (squishy) */
+  .card.tl:hover { transform: rotateX(7deg) rotateY(-8deg) scale(1.06); box-shadow:0 20px 48px rgba(12,18,30,0.12); }
+  .card.tr:hover { transform: rotateX(7deg) rotateY(8deg)  scale(1.06); box-shadow:0 20px 48px rgba(12,18,30,0.12); }
+  .card.bl:hover { transform: rotateX(-7deg) rotateY(-8deg) scale(1.06); box-shadow:0 20px 48px rgba(12,18,30,0.12); }
+  .card.br:hover { transform: rotateX(-7deg) rotateY(8deg)  scale(1.06); box-shadow:0 20px 48px rgba(12,18,30,0.12); }
+
+  /* Two content layers:
+     - .dark: default black text/icons
+     - .light: white text/icons, absolutely positioned and revealed via clip-path
+  */
+  .content-dark, .content-light {
+    width:100%;
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    text-align:center;
+    font-weight:600;
+    pointer-events:none; /* card is the interactive element */
+  }
+
+  .content-dark { color: #000; z-index:1; }
+
+  .content-light {
+    position:absolute;
+    left:0; top:0; right:0; bottom:0;
+    z-index:4; color:#fff;
+    -webkit-font-smoothing:antialiased;
+    clip-path: circle(0px at 50% 50%); /* initially hidden */
+    transition: clip-path 80ms linear;
+  }
+
+  .content-dark i, .content-light i {
+    font-size: 34px;
+    display:block;
+    line-height:1;
+  }
+  .title { font-size:18px; margin-top:4px; color:inherit; }
+  .username { font-size:14px; opacity:0.85; color:inherit; font-weight:600; margin-top:2px; }
+
+  /* Overlay colored circle (visual) */
+  .overlay {
+    position:absolute;
+    z-index:3; /* between dark content and light content */
+    left:50%; top:50%;
+    width: calc(var(--d, 0px));
+    height: calc(var(--d, 0px));
+    transform: translate(-50%,-50%) scale(0);
+    border-radius:50%;
+    pointer-events:none;
+    transition: transform 90ms linear, width 90ms linear, height 90ms linear, opacity 120ms;
+    filter: blur(8px); /* soft edges */
+    opacity: 0.95;
+  }
+
+  /* A small crisp core to give a denser center */
+  .overlay::after{
+    content:"";
+    position:absolute;
+    left:50%; top:50%;
+    transform:translate(-50%,-50%);
+    width:60%;
+    height:60%;
+    border-radius:50%;
+    opacity:0.95;
+    filter: none;
+  }
+
+  /* Colors per platform (as variables) */
+  .card.discord { --color: #5865F2; }
+  .card.youtube  { --color: #FF0000; }
+  .card.twitter  { --color: #1DA1F2; }
+  .card.instagram{ --color: #F56040; }
+
+  .card.discord .overlay { background: var(--color); }
+  .card.discord .overlay::after { background: var(--color); }
+  .card.youtube  .overlay { background: var(--color); }
+  .card.youtube  .overlay::after { background: var(--color); }
+  .card.twitter  .overlay { background: var(--color); }
+  .card.twitter  .overlay::after { background: var(--color); }
+  .card.instagram .overlay { background: var(--color); }
+  .card.instagram .overlay::after { background: var(--color); }
+
+  /* Make sure the light layer text appears above the overlay core */
+  .content-light { z-index:5; }
+
+  /* Background canvas */
+#canvas {
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  z-index:-1;
+  display:block;
+}
+  
+  /* Popup overlay */
+#popup {
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:rgba(255,255,255,0.95);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  z-index:9999;
+  text-align:center;
+  font-family:inherit;
+}
+
+#popup button {
+  margin-top:20px;
+  padding:12px 28px;
+  font-size:16px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  background:#000;
+  color:#fff;
+  transition: background 0.3s;
+}
+
+#popup button:hover {
+  background:#333;
+}
