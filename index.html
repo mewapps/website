@@ -1,431 +1,483 @@
-<!DOCTYPE html>
+
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8"/>
-    <meta name="viewport" content="width=device-width,initial-scale=1"/>
-    <title>Mew - Studio</title>
-    <style>
-        :root {
-            --bg1: #0b0710;
-            --bg2: #0f0d1a;
-            --accent: #d95a00;
-            --muted: #8b7a92;
-        }
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        html, body {
-            height: 100%;
-        }
-        body {
-            font-family: Inter, system-ui, Segoe UI, Roboto;
-            overflow: hidden;
-            background: radial-gradient(1200px 600px at 10% 10%, #0f0920 0%, transparent 20%),
-                        radial-gradient(800px 350px at 90% 90%, #101225 0%, transparent 25%),
-                        linear-gradient(120deg, #06050a 0%, #0b0710 35%, #120a18 65%, #0f0608 100%);
-            color: #fff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            position: relative;
-        }
-        canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-        }
-        .hint {
-            position: fixed;
-            left: 18px;
-            top: 18px;
-            font-size: clamp(12px, 1.8vw, 18px);
-            opacity: .9;
-            letter-spacing: .06em;
-            font-weight: 600;
-            color: var(--muted);
-        }
-        .hint.btm {
-            right: 18px;
-            left: auto;
-            bottom: 18px;
-            top: auto;
-            font-weight: 600;
-        }
-        .strip {
-            position: fixed;
-            left: 0;
-            right: 0;
-            height: 48px;
-            display: flex;
-            align-items: center;
-            overflow: hidden;
-            pointer-events: none;
-            z-index: 30;
-        }
-        .strip.top {
-            top: 10px;
-        }
-        .strip.bot {
-            bottom: 10px;
-        }
-        .track {
-            white-space: nowrap;
-            display: inline-block;
-            will-change: transform;
-            font-weight: 700;
-            padding: 0 2rem;
-            font-size: clamp(12px, 1.6vw, 16px);
-            text-transform: uppercase;
-            letter-spacing: .16em;
-            opacity: .86;
-        }
-        .track span {
-            display: inline-block;
-            padding: 0 1.6rem;
-            margin: 0 1rem;
-            position: relative;
-        }
-        .track span:after {
-            content: "";
-            position: absolute;
-            right: -.6rem;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 6px;
-            height: 6px;
-            border-radius: 999px;
-            background: linear-gradient(180deg, var(--accent), #ff8a00);
-            opacity: .9;
-        }
-        @keyframes marqueeL {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
-        }
-        @keyframes marqueeR {
-            0% { transform: translateX(-50%); }
-            100% { transform: translateX(0); }
-        }
-        .track.wrap {
-            display: inline-block;
-            padding-left: 100%;
-        }
-        .strip.top .track {
-            animation: marqueeL 18s linear infinite;
-        }
-        .strip.bot .track {
-            animation: marqueeR 22s linear infinite;
-        }
-        .stage {
-            position: relative;
-            z-index: 40;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            gap: 12px;
-            padding: 40px;
-        }
-        .logo {
-            font-size: clamp(48px, 18vw, 140px);
-            font-weight: 800;
-            will-change: font-family, transform, filter;
-            text-align: center;
-            line-height: 0.86;
-            letter-spacing: .02em;
-            transition: all .28s cubic-bezier(.2, .9, .3, 1);
-            text-shadow: 0 8px 40px rgba(0,0,0,.7), 0 1px 0 rgba(255,255,255,.02);
-            animation: glow 3s infinite alternate;
-        }
-        @keyframes glow {
-            from { text-shadow: 0 0 20px #ff6, 0 0 40px #f06; }
-            to { text-shadow: 0 0 40px #6ff, 0 0 80px #06f; }
-        }
-        .field {
-            position: fixed;
-            inset: 0;
-            z-index: 10;
-            display: grid;
-            place-items: center;
-            pointer-events: none;
-            perspective: 900px;
-            opacity: .65;
-        }
-        .grid {
-            width: 120%;
-            height: 120%;
-            display: grid;
-            grid-template-columns: repeat(28, 1fr);
-            grid-auto-rows: calc(100% / 18);
-            gap: 6px;
-            transform-style: preserve-3d;
-            filter: blur(.2px) saturate(1.05);
-        }
-        .tile {
-            width: 100%;
-            height: 100%;
-            display: block;
-            transform-style: preserve-3d;
-            transition: transform .6s linear;
-            will-change: transform;
-            transform-origin: center;
-            box-shadow: 0 6px 16px rgba(0,0,0,.45) inset;
-            border-radius: 4px;
-            backface-visibility: hidden;
-            outline: 1px solid rgba(255,255,255,.02);
-        }
-        .tile .face {
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(145deg, rgba(255,255,255,.02), rgba(0,0,0,.35));
-            border-radius: 3px;
-            transform: translateZ(18px);
-        }
-        @keyframes upturn {
-            0% { transform: rotateX(6deg) translateZ(0) translateY(0); }
-            50% { transform: rotateX(-72deg) translateZ(26px) translateY(-8px); }
-            100% { transform: rotateX(6deg) translateZ(0) translateY(0); }
-        }
-        .tile.ani {
-            animation: upturn var(--dur, 4s) ease-in-out var(--delay, 0s) infinite;
-        }
-        .vfx {
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-            z-index: 20;
-            mix-blend-mode: screen;
-        }
-        .vfx:before {
-            content: "";
-            position: absolute;
-            inset: -20%;
-            background: radial-gradient(600px 160px at 10% 20%, rgba(217,90,0,.06), transparent 10%),
-                        radial-gradient(400px 200px at 80% 80%, rgba(80,60,150,.04), transparent 10%);
-            filter: blur(40px);
-            opacity: .9;
-        }
-        .vfx:after {
-            content: "";
-            position: absolute;
-            inset: 0;
-            background-image: linear-gradient(90deg, rgba(255,255,255,.02) 0 1px, transparent 1px);
-            background-size: 12px 12px;
-            mix-blend-mode: overlay;
-            opacity: .12;
-        }
-        @media (max-width: 720px) {
-            .strip { height: 38px; }
-            .logo { font-size: clamp(34px, 24vw, 86px); }
-            .grid { gap: 4px; grid-template-columns: repeat(18, 1fr); grid-auto-rows: calc(100% / 22); }
-        }
-        /* loading screen */
-        #loader {
-            position: fixed;
-            inset: 0;
-            background: #0a0710;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 999;
-            transition: opacity .8s ease;
-        }
-        #loader img {
-            width: 120px;
-            animation: pulse 1.2s ease-in-out infinite alternate;
-        }
-        @keyframes pulse {
-            to { transform: scale(1.1); opacity: .8; }
-        }
-        #bar {
-            width: 60%;
-            max-width: 400px;
-            height: 6px;
-            background: rgba(255,255,255,.08);
-            border-radius: 3px;
-            overflow: hidden;
-            margin-top: 30px;
-        }
-        #bar span {
-            display: block;
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, var(--accent), #ff8a00);
-            border-radius: 3px;
-            transition: width .2s;
-        }
-    </style>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron&family=Russo+One&family=Poiret+One&family=Exo+2&family=Bungee+Hairline&family=Chakra+Petch&family=Monoton&family=Audiowide&family=Teko&family=Righteous&family=Syncopate&family=VT323&family=Major+Mono+Display&family=Cinzel+Decorative&family=Press+Start+2P&family=Michroma&family=Wallpoet&family=Unica+One&family=Jura&family=Kanit&family=Inter&family=Montserrat&family=Poppins&family=Rubik&family=Space+Grotesk&family=Nunito&family=Bebas+Neue&family=Raleway&family=Playfair+Display&family=Oswald&family=Lato&family=Merriweather&family=PT+Sans&family=Work+Sans&family=Inconsolata&family=Heebo&family=Ubuntu&family=Quicksand&display=swap" rel="stylesheet">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Mew ✦ Socials</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
+<style>
+:root {
+  --card-radius: 18px;
+  --card-w: min(44vw, 300px);
+  --card-h: min(35vw, 240px);
+  --circle-r: 120px;
+}
+
+
+  html,body{
+    height:100%;
+    margin:0;
+    font-family: "Segoe UI", Roboto, system-ui, -apple-system, "Helvetica Neue", Arial;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:40px;
+  }
+
+  /* Grid container */
+/* Grid container */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, var(--card-w));
+  grid-template-rows: repeat(2, var(--card-h));
+  gap: 28px;
+  justify-content: center;
+  align-content: center;
+  perspective: 320px;
+}
+
+
+  /* Card */
+  .card {
+    position: relative;
+    width: var(--card-w);
+    height: var(--card-h);
+    border-radius: var(--card-radius);
+    background: linear-gradient(180deg,#ffffff,#fafafa);
+    border: 1px solid rgba(0,0,0,0.06);
+    box-shadow: 0 10px 30px rgba(12,18,30,0.07);
+    overflow: hidden;
+    cursor: pointer;
+    transform-style: preserve-3d;
+    transition: transform 360ms cubic-bezier(.2,.8,.2,1), box-shadow 260ms;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-decoration: none !important;
+  }
+
+  /* card inner (for consistent stacking) */
+  .card-inner {
+    position:relative;
+    width:100%;
+    height:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding: 12px;
+  }
+
+  /* Make outer corners feel like they "fan out" */
+  .card.tl  { transform-origin: top left;    transform: rotateX(7deg)  rotateY(-8deg); }
+  .card.tr  { transform-origin: top right;   transform: rotateX(7deg)  rotateY(8deg);  }
+  .card.bl  { transform-origin: bottom left; transform: rotateX(-7deg) rotateY(-8deg); }
+  .card.br  { transform-origin: bottom right;transform: rotateX(-7deg) rotateY(8deg);  }
+
+  /* Keep the angle but scale on hover (squishy) */
+  .card.tl:hover { transform: rotateX(7deg) rotateY(-8deg) scale(1.06); box-shadow:0 20px 48px rgba(12,18,30,0.12); }
+  .card.tr:hover { transform: rotateX(7deg) rotateY(8deg)  scale(1.06); box-shadow:0 20px 48px rgba(12,18,30,0.12); }
+  .card.bl:hover { transform: rotateX(-7deg) rotateY(-8deg) scale(1.06); box-shadow:0 20px 48px rgba(12,18,30,0.12); }
+  .card.br:hover { transform: rotateX(-7deg) rotateY(8deg)  scale(1.06); box-shadow:0 20px 48px rgba(12,18,30,0.12); }
+
+  /* Two content layers:
+     - .dark: default black text/icons
+     - .light: white text/icons, absolutely positioned and revealed via clip-path
+  */
+  .content-dark, .content-light {
+    width:100%;
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    text-align:center;
+    font-weight:600;
+    pointer-events:none; /* card is the interactive element */
+  }
+
+  .content-dark { color: #000; z-index:1; }
+
+  .content-light {
+    position:absolute;
+    left:0; top:0; right:0; bottom:0;
+    z-index:4; color:#fff;
+    -webkit-font-smoothing:antialiased;
+    clip-path: circle(0px at 50% 50%); /* initially hidden */
+    transition: clip-path 80ms linear;
+  }
+
+  .content-dark i, .content-light i {
+    font-size: 34px;
+    display:block;
+    line-height:1;
+  }
+  .title { font-size:18px; margin-top:4px; color:inherit; }
+  .username { font-size:14px; opacity:0.85; color:inherit; font-weight:600; margin-top:2px; }
+
+  /* Overlay colored circle (visual) */
+  .overlay {
+    position:absolute;
+    z-index:3; /* between dark content and light content */
+    left:50%; top:50%;
+    width: calc(var(--d, 0px));
+    height: calc(var(--d, 0px));
+    transform: translate(-50%,-50%) scale(0);
+    border-radius:50%;
+    pointer-events:none;
+    transition: transform 90ms linear, width 90ms linear, height 90ms linear, opacity 120ms;
+    filter: blur(8px); /* soft edges */
+    opacity: 0.95;
+  }
+
+  /* A small crisp core to give a denser center */
+  .overlay::after{
+    content:"";
+    position:absolute;
+    left:50%; top:50%;
+    transform:translate(-50%,-50%);
+    width:60%;
+    height:60%;
+    border-radius:50%;
+    opacity:0.95;
+    filter: none;
+  }
+
+  /* Colors per platform (as variables) */
+  .card.discord { --color: #5865F2; }
+  .card.youtube  { --color: #FF0000; }
+  .card.twitter  { --color: #1DA1F2; }
+  .card.instagram{ --color: #F56040; }
+
+  .card.discord .overlay { background: var(--color); }
+  .card.discord .overlay::after { background: var(--color); }
+  .card.youtube  .overlay { background: var(--color); }
+  .card.youtube  .overlay::after { background: var(--color); }
+  .card.twitter  .overlay { background: var(--color); }
+  .card.twitter  .overlay::after { background: var(--color); }
+  .card.instagram .overlay { background: var(--color); }
+  .card.instagram .overlay::after { background: var(--color); }
+
+  /* Make sure the light layer text appears above the overlay core */
+  .content-light { z-index:5; }
+
+  /* Background canvas */
+#canvas {
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  z-index:-1;
+  display:block;
+}
+  
+  /* Popup overlay */
+#popup {
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:rgba(255,255,255,0.95);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  z-index:9999;
+  text-align:center;
+  font-family:inherit;
+}
+
+#popup button {
+  margin-top:20px;
+  padding:12px 28px;
+  font-size:16px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  background:#000;
+  color:#fff;
+  transition: background 0.3s;
+}
+
+#popup button:hover {
+  background:#333;
+}
+</style>
 </head>
 <body>
-    <div id="loader">
-        <img src="/image/Mew_logo-tp.png" alt="logo">
-        <div id="bar"><span></span></div>
-    </div>
-    <canvas id="bg"></canvas>
-    <div class="field" aria-hidden="true">
-        <div class="grid" id="g"></div>
-    </div>
-    <div class="vfx"></div>
-    <div class="stage">
-        <div class="logo" id="brand">Mew</div>
-    </div>
-    <div class="hint">Experience the</div>
-    <div class="hint btm">...soon with you</div>
-    <div class="strip top">
-        <div class="track" id="topT"></div>
-    </div>
-    <div class="strip bot">
-        <div class="track" id="botT"></div>
-    </div>
-    <script>
-        const c = document.getElementById("bg"), x = c.getContext("2d");
-        let t = 0;
-        function resize() {
-            c.width = innerWidth;
-            c.height = innerHeight;
-        }
-        resize();
-        addEventListener("resize", resize);
-        function wave() {
-            x.clearRect(0, 0, c.width, c.height);
-            const w = c.width, h = c.height;
-            x.fillStyle = x.createLinearGradient(0, 0, w, h);
-            x.fillStyle.addColorStop(0, "#20002c");
-            x.fillStyle.addColorStop(1, "#111");
-            x.fillRect(0, 0, w, h);
-            for (let j = 0; j < 3; j++) {
-                x.beginPath();
-                for (let i = 0; i <= w; i += 10) {
-                    let y = Math.sin(i * 0.005 + t * 0.02 + j) * 50 + Math.cos(i * 0.002 - t * 0.015 - j) * 30 + (h * 0.6 + Math.sin(t * 0.01 + j) * 60);
-                    x.lineTo(i, y);
-                }
-                x.strokeStyle = `hsla(${200 + 50 * j}, 80%, ${30 + 20 * j}%, .5)`;
-                x.lineWidth = 2;
-                x.stroke();
-            }
-            for (let i = 0; i < 80; i++) {
-                x.fillStyle = `hsla(${200 + Math.sin(i + t * 0.02) * 60}, 80%, 50%, .3)`;
-                let px = (i * 30 + t * 5) % w;
-                let py = Math.sin(px * 0.01 + t * 0.02) * 40 + h * 0.65;
-                x.beginPath();
-                x.rect(px, py, 8, 8);
-                x.fill();
-            }
-            t += 0.5;
-            requestAnimationFrame(wave);
-        }
-        wave();
 
-        const F = [
-            "Orbitron", "Russo One", "Poiret One", "Exo 2", "Bungee Hairline", "Chakra Petch", "Monoton", "Audiowide", "Teko", "Righteous",
-            "Syncopate", "VT323", "Major Mono Display", "Cinzel Decorative", "Press Start 2P", "Michroma", "Wallpoet", "Unica One", "Jura", "Kanit",
-            "Inter", "Montserrat", "Poppins", "Rubik", "Space Grotesk", "Nunito", "Bebas Neue", "Raleway", "Playfair Display", "Oswald",
-            "Lato", "Merriweather", "PT Sans", "Work Sans", "Inconsolata", "Heebo", "Ubuntu", "Quicksand"
-        ];
-        const grid = document.getElementById('g');
-        const cols = 28, rows = 18;
-        for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-                const t = document.createElement('div');
-                t.className = 'tile';
-                t.style.setProperty('--r', r);
-                t.style.setProperty('--c', c);
-                const f = document.createElement('div');
-                f.className = 'face';
-                t.appendChild(f);
-                grid.appendChild(t);
-            }
-        }
-        [...document.querySelectorAll('.tile')].forEach(el => {
-            const c = +el.style.getPropertyValue('--c');
-            const r = +el.style.getPropertyValue('--r');
-            const dx = c - cols / 2, dy = r - rows / 2;
-            const d = Math.hypot(dx, dy);
-            el.classList.add('ani');
-            el.style.setProperty('--delay', `${d / 6 + Math.random() * 0.6}s`);
-            el.style.setProperty('--dur', `${4.5 + Math.random() * 3}s`);
-            el.style.opacity = 0.82 - d / 160;
-            el.style.transform = `rotateX(6deg) translateZ(${(Math.sin(d / 3) + 2) * 2}px)`;
-        });
-        const brand = document.getElementById('brand');
-        let idx = 0;
-        function tick() {
-            brand.style.fontFamily = `'${F[Math.floor(Math.random() * F.length)]}', sans-serif`;
-            brand.style.transform = 'scale(1.02) rotateZ(' + (Math.sin(Date.now() / 400) * 1.2) + 'deg)';
-            brand.style.filter = 'drop-shadow(0 20px 30px rgba(0,0,0,.6))';
-            idx++;
-        }
-        tick();
-        setInterval(tick, 1000);
-        const P = ['Apps.', 'Websites.', 'Games.', 'Music.', 'Books.', '3D Animation.', 'Services.', 'Design.', 'Social Media.', 'Graphics.', 'Lifestyles.'];
-        function mk(track, repeat) {
-            const out = document.getElementById(track), txt = P.join(' ');
-            for (let i = 0; i < repeat; i++) {
-                const s = document.createElement('span');
-                s.textContent = txt;
-                out.appendChild(s);
-            }
-            out.classList.add('wrap');
-        }
-        mk('topT', 6);
-        mk('botT', 6);
-        let px = 0, py = 0;
-        function mv(x, y) {
-            px = (x - innerWidth / 2) / innerWidth * 18;
-            py = (y - innerHeight / 2) / innerHeight * 10;
-            document.querySelector('.grid').style.transform = `rotateX(${py}deg) rotateZ(${px / 6}deg) translateZ(-40px)`;
-            document.querySelector('.stage').style.transform = `translate3d(${px / 2}px, ${py / 2}px, 0)`;
-        }
-        window.addEventListener('pointermove', e => mv(e.clientX, e.clientY));
-        window.addEventListener('touchmove', e => {
-            if (e.touches[0]) mv(e.touches[0].clientX, e.touches[0].clientY);
-        }, { passive: true });
-        if (window.DeviceOrientationEvent) {
-            window.addEventListener('deviceorientation', o => {
-                mv(innerWidth / 2 + (o.gamma || 0) * 8, innerHeight / 2 + (o.beta || 0) * 6);
-            });
-        }
-        const mq = matchMedia('(prefers-reduced-motion: reduce)');
-        if (mq.matches) {
-            document.querySelectorAll('.tile').forEach(t => t.classList.remove('ani'));
-            document.querySelectorAll('.track').forEach(t => t.style.animation = 'none');
-        }
-        /* loader logic */
-        const loader = document.getElementById('loader'), bar = document.querySelector('#bar span');
-        let progress = 0;
-        const assets = [...F.map(f => `https://fonts.googleapis.com/css2?family=${encodeURIComponent(f)}`), '/image/Mew_logo-tp.png'];
-        function preload(url) {
-            return new Promise(res => {
-                const el = url.endsWith('.png') ? new Image() : document.createElement('link');
-                if (el.tagName === 'IMG') {
-                    el.onload = res;
-                    el.onerror = res;
-                    el.src = url;
-                } else {
-                    el.rel = 'stylesheet';
-                    el.href = url;
-                    el.onload = res;
-                    el.onerror = res;
-                    document.head.appendChild(el);
-                }
-            });
-        }
-        Promise.all(assets.map((a, i) => preload(a).then(() => {
-            progress = (i + 1) / assets.length * 100;
-            bar.style.width = progress + '%';
-        }))).then(() => {
-            setTimeout(() => {
-                loader.style.opacity = '0';
-                setTimeout(() => loader.remove(), 800);
-            }, 300);
-        });
-    </script>
+  <canvas id="canvas"></canvas>
+  
+  <!-- Popup that asks for user interaction -->
+  <div id="popup">
+    <div><b>Refresh</b> this page and <b>click</b> below</div>
+    <button id="startBtn">Enter the Mewverse</button>
+  </div>
+  
+  <div class="grid">
+    <!-- Discord (top-left) -->
+    <a class="card tl discord" href="https://discord.com/users/763801931348049982" target="_blank" rel="noopener noreferrer">
+      <div class="card-inner">
+        <div class="content-dark">
+          <i class="fab fa-linkedin" aria-hidden="true"></i>
+          <div class="title">LinkedIn</div>
+          <div class="username">themewcompany</div>
+        </div>
+
+        <div class="overlay" aria-hidden="true"></div>
+
+        <div class="content-light" aria-hidden="true">
+          <i class="fab fa-linkedin"></i>
+          <div class="title">LinkedIn</div>
+          <div class="username">themewcompany</div>
+        </div>
+      </div>
+    </a>
+
+    <!-- Instagram (top-right) -->
+    <a class="card tr instagram" href="https://medium.com/@mewcompany" target="_blank" rel="noopener noreferrer">
+      <div class="card-inner">
+        <div class="content-dark">
+          <i class="fab fa-medium"></i>
+          <div class="title">Medium</div>
+          <div class="username">@mewcompany</div>
+        </div>
+
+        <div class="overlay" aria-hidden="true"></div>
+
+        <div class="content-light" aria-hidden="true">
+          <i class="fab fa-medium"></i>
+          <div class="title">Medium</div>
+          <div class="username">@mewcompany</div>
+        </div><!-- Almost everything was written by AI, yeah. So what? Everyone is coding like this nowadays. -->
+      </div>
+    </a>
+
+    <!-- Twitter (bottom-left) -->
+    <a class="card bl twitter" href="https://x.com/mewapps" target="_blank" rel="noopener noreferrer">
+      <div class="card-inner">
+        <div class="content-dark">
+          <i class="fab fa-twitter"></i>
+          <div class="title">Twitter</div>
+          <div class="username">@mewapps</div>
+        </div>
+
+        <div class="overlay" aria-hidden="true"></div>
+
+        <div class="content-light" aria-hidden="true">
+          <i class="fab fa-twitter"></i>
+          <div class="title">Twitter</div>
+          <div class="username">@mewapps</div>
+        </div>
+      </div>
+    </a>
+
+    <!-- YouTube (bottom-right) -->
+    <a class="card br youtube" href="https://youtube.com/@Mew-fr" target="_blank" rel="noopener noreferrer">
+      <div class="card-inner">
+        <div class="content-dark">
+          <i class="fab fa-youtube"></i>
+          <div class="title">YouTube</div>
+          <div class="username">@Mew-fr</div>
+        </div>
+
+        <div class="overlay" aria-hidden="true"></div>
+
+        <div class="content-light" aria-hidden="true">
+          <i class="fab fa-youtube"></i>
+          <div class="title">YouTube</div>
+          <div class="username">@Mew-fr</div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+<script>
+  // For each card, track mouse and adjust:
+  //  - CSS vars --cx and --cy used via clip-path
+  //  - overlay position set via left/top and diameter via --d
+  //  - show/hide by setting scale or making diameter 0
+  const RADIUS = 110; // pixels (feel free to tweak)
+  document.querySelectorAll('.card').forEach(card => {
+    const overlay = card.querySelector('.overlay');
+    const light = card.querySelector('.content-light');
+
+    // initial CSS variables
+    card.style.setProperty('--d', '0px'); // diameter
+    card.style.setProperty('--cx','50%');
+    card.style.setProperty('--cy','50%');
+
+    function onMove(e){
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      const diameter = (RADIUS * 2) + 'px';
+      card.style.setProperty('--d', diameter);
+
+      // position overlay (left/top)
+      overlay.style.left = x + 'px';
+      overlay.style.top = y + 'px';
+      overlay.style.transform = 'translate(-50%,-50%) scale(1)';
+
+      // reveal white text layer by setting clip-path
+      light.style.clipPath = `circle(${RADIUS}px at ${x}px ${y}px)`;
+    }
+
+    function onLeave(){
+      // hide overlay + white clip
+      overlay.style.transform = 'translate(-50%,-50%) scale(0)';
+      overlay.style.left = '50%';
+      overlay.style.top = '50%';
+      light.style.clipPath = `circle(0px at 50% 50%)`;
+    }
+
+    card.addEventListener('mousemove', onMove);
+    card.addEventListener('mouseenter', onMove); // ensure shows immediately when entering
+    card.addEventListener('mouseleave', onLeave);
+  });
+</script>
+  
+  <!-- WebGL background effect -->
+<script>
+var canvas = document.getElementById("canvas");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+var gl = canvas.getContext('webgl');
+if(!gl){ console.error("Unable to initialize WebGL."); }
+var time = 0.0;
+
+var vertexSource = `
+attribute vec2 position;
+void main() {
+  gl_Position = vec4(position, 0.0, 1.0);
+}
+`;
+var fragmentSource = `
+precision highp float;
+#define AA
+uniform float width;
+uniform float height;
+vec2 resolution = vec2(width, height);
+uniform float time;
+void main(){
+  float strength = 0.4;
+  float t = time/6.0;
+  vec3 col = vec3(0);
+  vec2 fC = gl_FragCoord.xy;
+  #ifdef AA
+  for(int i = -1; i <= 1; i++) {
+    for(int j = -1; j <= 1; j++) {
+      fC = gl_FragCoord.xy+vec2(i,j)/3.0;
+  #endif
+      vec2 pos = fC/resolution.xy;
+      pos.y /= resolution.x/resolution.y;
+      pos = 4.0*(vec2(0.5) - pos);
+      for(float k = 1.0; k < 7.0; k+=1.0){ 
+        pos.x += strength * sin(2.0*t+k*1.5 * pos.y)+t*0.5;
+        pos.y += strength * cos(2.0*t+k*1.5 * pos.x);
+      }
+      col += 0.5 + 0.5*cos(time+pos.xyx+vec3(0,2,4));
+  #ifdef AA
+    }
+  }
+  col /= 9.0;
+  #endif
+  col = pow(col, vec3(0.4545));
+  gl_FragColor = vec4(col,1.0);
+}
+`;
+
+window.addEventListener( 'resize', onWindowResize, false );
+function onWindowResize(){
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+  gl.viewport(0, 0, canvas.width, canvas.height);
+  gl.uniform1f(widthHandle, window.innerWidth);
+  gl.uniform1f(heightHandle, window.innerHeight);
+}
+function compileShader(shaderSource, shaderType){
+  var shader = gl.createShader(shaderType);
+  gl.shaderSource(shader, shaderSource);
+  gl.compileShader(shader);
+  if(!gl.getShaderParameter(shader, gl.COMPILE_STATUS)){
+    throw "Shader compile failed with: " + gl.getShaderInfoLog(shader);
+  }
+  return shader;
+}
+function getAttribLocation(program, name) {
+  var attributeLocation = gl.getAttribLocation(program, name);
+  if (attributeLocation === -1) {
+    throw 'Cannot find attribute ' + name + '.';
+  }
+  return attributeLocation;
+}
+function getUniformLocation(program, name) {
+  var attributeLocation = gl.getUniformLocation(program, name);
+  if (attributeLocation === -1) {
+    throw 'Cannot find uniform ' + name + '.';
+  }
+  return attributeLocation;
+}
+var vertexShader = compileShader(vertexSource, gl.VERTEX_SHADER);
+var fragmentShader = compileShader(fragmentSource, gl.FRAGMENT_SHADER);
+var program = gl.createProgram();
+gl.attachShader(program, vertexShader);
+gl.attachShader(program, fragmentShader);
+gl.linkProgram(program);
+gl.useProgram(program);
+var vertexData = new Float32Array([
+  -1.0,  1.0,
+  -1.0, -1.0,
+   1.0,  1.0,
+   1.0, -1.0,
+]);
+var vertexDataBuffer = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, vertexDataBuffer);
+gl.bufferData(gl.ARRAY_BUFFER, vertexData, gl.STATIC_DRAW);
+var positionHandle = getAttribLocation(program, 'position');
+gl.enableVertexAttribArray(positionHandle);
+gl.vertexAttribPointer(positionHandle, 2, gl.FLOAT, false, 2 * 4, 0);
+var timeHandle = getUniformLocation(program, 'time');
+var widthHandle = getUniformLocation(program, 'width');
+var heightHandle = getUniformLocation(program, 'height');
+gl.uniform1f(widthHandle, window.innerWidth);
+gl.uniform1f(heightHandle, window.innerHeight);
+var lastFrame = Date.now();
+var thisFrame;
+function draw(){
+  thisFrame = Date.now();
+  time += (thisFrame - lastFrame)/770;
+  lastFrame = thisFrame;
+  gl.uniform1f(timeHandle, time);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  requestAnimationFrame(draw);
+}
+draw();
+</script>
+  
+  <!-- Hidden YouTube audio player -->
+<iframe 
+  width="0" 
+  height="0" 
+  src="https://www.youtube.com/embed/L8o8X5lohJ0?start=27&autoplay=1&loop=1&playlist=L8o8X5lohJ0&controls=0&modestbranding=1&rel=0&mute=0" 
+  frameborder="0" 
+  allow="autoplay" 
+  allowfullscreen>
+</iframe>
+
+ <script>
+document.getElementById("startBtn").addEventListener("click", function() {
+  // Hide popup
+  document.getElementById("popup").style.display = "none";
+});
+</script>
+  
 </body>
 </html>
